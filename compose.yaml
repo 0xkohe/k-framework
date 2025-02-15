@@ -8,3 +8,7 @@ services:
     volumes:
       - ./src:/app
     working_dir: /app
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp=unconfined
