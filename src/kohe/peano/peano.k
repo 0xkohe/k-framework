@@ -6,7 +6,6 @@ module PEANO
   // syntax for addition
   syntax Nat ::= Nat "+" Nat [function]
 
-  // rules for addition
   rule X + 0 => X
   rule X + S(Y) => S(X + Y)
 endmodule
