@@ -1,0 +1,2 @@
+kompile lesson-12-c.k --main-module  LESSON-12-C
+ krun -cPGM='sum(12,1,1,2,3)'
