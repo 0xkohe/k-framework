@@ -21,6 +21,10 @@ module LESSON-14-A
 
   rule <k> E:Exp + HOLE:Exp => HOLE ~> freezer1(E) ...</k>
     requires isKResult(E) [heat]
+  // same as: rule <k> E:Exp + HOLE:Exp => HOLE ~> freezer1(E) ...</k> [heat]
+  // The compiler will automatically insert the side condition requires isKResult(HOLE) 
+  // to cooling rules and the side condition requires notBool isKResult(HOLE) to heating rules.
+
   rule <k> HOLE:Exp + E:Exp => HOLE ~> freezer2(E) ...</k> [heat]
   rule <k> E:Exp && HOLE:Exp => HOLE ~> freezer3(E) ...</k>
     requires isKResult(E) [heat]
