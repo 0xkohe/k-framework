@@ -39,6 +39,7 @@ module BINARY-INCREMENT-TM
  //      <right> .List => .List </right>
  //      <state> q0 </state>
   
+  // leftのテープに記号を追加する初期化規, 右端に移動もする
   rule <k> S1:Symbol Ss:Tape => Ss </k>
        <current> _Cu => S1 </current>
        <left> Ls => Ls ListItem(S1) </left>
