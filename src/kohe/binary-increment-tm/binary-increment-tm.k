@@ -33,56 +33,23 @@ module BINARY-INCREMENT-TM
 
 ////  // 初期化規則
 //　実行されてない
-  rule <k> S1:Symbol Ss:Tape => Ss </k>
-       <left> .List => .List </left>
-       <current> B => S1 </current>
-       <right> .List => .List </right>
-       <state> q0 </state>
+ // rule <k> S1:Symbol Ss:Tape => Ss </k>
+ //      <left> .List => .List </left>
+ //      <current> B => S1 </current>
+ //      <right> .List => .List </right>
+ //      <state> q0 </state>
   
   rule <k> S1:Symbol Ss:Tape => Ss </k>
        <current> _Cu => S1 </current>
        <left> Ls => Ls ListItem(S1) </left>
        <state> q0 => q0 </state>
-       //<right> Rs => Rs ListItem(S1) </right>
        requires S1 =/=K B
-       //requires (S1 ==K 0) orBool (S1 ==K 1)
   
   rule <k> .Tape </k> 
   <state> q0 => q1 </state>
   
-  //rule <k> .Tape => .K </k> [owise]
-  
   // 状態遷移規則
   
-//   // q0: 右端を探す
-//   rule <current> 0 => 0 </current>
-//        <left> Ls => Ls ListItem(0)</left>
-//        <right> ListItem(_R1:Symbol) Rs => Rs </right>
-//        <state> q0 </state>
-//     //requires R =/=K .List
-//   
-//   rule <current> 1 => 1 </current>
-//        <left> Ls => Ls ListItem(1) </left>
-//        <right> ListItem(_R1:Symbol) Rs => Rs </right>
-//        <state> q0 </state>
-// //    requires R =/=K .List
-
-
-
-//  
-//  // 右端のブランクを見つけたら、左に戻って加算開始
-//  rule <current> S => B </current>
-//       <left> Ls L => Ls </left>
-//       <right> .List => L .List </right>
-//       <state> q0 => q1 </state>
-//    requires S ==K 0 orBool S ==K 1
-//  
-//  rule <current> B </current>
-//       <left> Ls L => Ls </left>
-//       <right> .List => L .List </right>
-//       <state> q0 => q1 </state>
-//    requires Ls =/=K .List
-//  
   // q1: 加算処理
   // 0を見つけたら1に変更して完了
   rule <current> 0 => 1 </current>
@@ -110,145 +77,17 @@ module BINARY-INCREMENT-TM
 
   rule <current> B </current>
        <state> q2 => qf </state>
-       
-       
-//  
-//  rule <current> 0 => B </current>
-//       <left> .List </left>
-//       <right> Rs => 0 Rs </right>
-//       <state> q1 => q2 </state>
-//  
-//  rule <current> 1 => B </current>
-//       <left> .List </left>
-//       <right> Rs => 1 Rs </right>
-//       <state> q1 => q2 </state>
-//  
-//  // q2: 左端に戻る
-//  rule <current> 0 => 0 </current>
-//       <left> Ls L => Ls </left>
-//       <right> Rs => L Rs </right>
-//       <state> q2 </state>
-//    requires Ls =/=K .List
-//  
-//  rule <current> 1 => 1 </current>
-//       <left> Ls L => Ls </left>
-//       <right> Rs => L Rs </right>
-//       <state> q2 </state>
-//    requires Ls =/=K .List
-//  
-//  // 左端のブランクに到達したら完了
-//  rule <current> B => S </current>
-//       <left> .List </left>
-//       <right> S Rs => Rs </right>
-//       <state> q2 => qf </state>
-//  
-//  rule <current> S </current>
-//       <left> .List </left>
-//       <state> q2 => qf </state>
-//    requires S ==K 0 orBool S ==K 1
-//  
-//  // 最終状態で結果を保存
-//  rule <state> qf </state>
-//       <left> Ls </left>
-//       <current> C </current>
-//       <right> Rs </right>
-//       <result> .K => buildTape(Ls, C, Rs) </result>
-//  
-//  // ヘルパー関数：テープを構築
-//  syntax Tape ::= buildTape(List, Symbol, List) [function]
-//  rule buildTape(.List, C, Rs) => C reverseList(Rs)
-//  rule buildTape(L Ls, C, Rs) => buildTape(Ls, L, C Rs)
-//  
-//  syntax Tape ::= reverseList(List) [function]
-//  rule reverseList(.List) => .Tape
-//  rule reverseList(L Ls) => reverseList(Ls) L
-//
-//endmodule
-//
-//// テストモジュール
-//module TURING-MACHINE-ADD-ONE-TEST
-//  imports TURING-MACHINE-ADD-ONE
-//  
-//  syntax Pgm ::= "test1" | "test2" | "test3" | "test4"
-//  
-//  // テストケース
-//  rule test1 => 1 0 1 0      // 1010 + 1 = 1011
-//  rule test2 => 1 0 1 1      // 1011 + 1 = 1100
-//  rule test3 => 1 1 1        // 111 + 1 = 1000
-//  rule test4 => 0            // 0 + 1 = 1
-  
 
+   rule <current> B </current>
+        <state>  qf </state>
+        <left> Ls </left>
+        <right> Rs </right>
+        <result> .K => buildTape(Ls, Rs) </result>
 
-// ==== BINARY-INCREMENT-TM ====
-//module BINARY-INCREMENT-TM
-//  syntax Bit   ::= "0" | "1"
-//  syntax Sym   ::= Bit | "_"            // ブランクも 1 文字として扱う
-//  syntax Tape  ::= List{Sym,""}         // ヘッド右側・左側を同じ型で表現
-//  syntax State ::= "qSeekEnd" | "qCarry" | "halt"
-//
-//  // コンフィギュレーション
-//  configuration
-//    <machine>
-//      //<state>  $S:State </state>        // 初期状態
-//      <state>  qSeekEnd         </state>  // 初期状態
-//      <left>   $LS:Tape         </left>   // ヘッド左側（左端がリスト末尾）
-//      <head>   $H:Sym           </head>   // 現在読んでいるシンボル
-//      <right>  $RS:Tape         </right>  // ヘッド右側（先頭が隣接セル）
-//    </machine>
-//
-//   //-----------------------------
-//   // テープ移動の補助マクロ
-//   //-----------------------------
-//   syntax KItem ::= moveRight | moveLeft
-// 
-//   rule <machine> <left> LS </left> <head> H </head> (<right> Sym RS </right>) </machine>
-//        moveRight
-//     => <machine> <left> LS H </left> <head> Sym </head> <right> RS </right> </machine>
-// 
-//   rule <machine> (<left> LS Sym </left>) <head> H </head> <right> RS </right>
-//        moveLeft
-//     => <machine> <left> LS </left> <head> Sym </head> <right> H RS </right> </machine>
-// 
-//   //-----------------------------
-//   // 1. 右端（ブランク）を探すフェーズ
-//   //-----------------------------
-//   rule <machine>
-//          <state> qSeekEnd </state>
-//          <head> "_" </head>
-//        </machine>
-//     => moveLeft
-//     ~> <machine> <state> qCarry </state> </machine>
-// 
-//   rule <machine>
-//          <state> qSeekEnd </state>
-//          <head> B:Bit </head>
-//        </machine>
-//     => moveRight
-//     ~> <machine> <state> qSeekEnd </state> </machine>
-// 
-//   //-----------------------------
-//   // 2. キャリー処理フェーズ
-//   //-----------------------------
-//   // 2-a 0 に遭遇したら 1 に書き換えて終了
-//   rule <machine>
-//          <state> qCarry </state>
-//          <head> "0" </head>
-//        </machine>
-//     => <machine> <head> "1" </head> <state> halt </state> </machine>
-// 
-//   // 2-b 1 に遭遇したら 0 に書き換えてさらに左へ
-//   rule <machine>
-//          <state> qCarry </state>
-//          <head> "1" </head>
-//        </machine>
-//     => <machine> <head> "0" </head> </machine>
-//     ~> moveLeft
-//     ~> <machine> <state> qCarry </state> </machine>
-// 
-//   // 2-c 左端ブランクに達したら 1 を書き足して終了
-//   rule <machine>
-//          <state> qCarry </state>
-//          <head> "_" </head>
-//        </machine>
-//     => <machine> <head> "1" </head> <state> halt </state> </machine>
+  // ヘルパー関数：テープを構築
+  syntax Tape ::= buildTape(List, List) [function]
+  rule buildTape(ListItem(L1) Ls,  Rs) => L1 buildTape(Ls, Rs)
+  rule buildTape(.List,  ListItem(R1) Rs) => R1 buildTape(.List, Rs)
+  rule buildTape(.List, .List) => .Tape
+
 endmodule
