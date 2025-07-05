@@ -22,9 +22,9 @@ module BINARY-INCREMENT-TM
   configuration <T>
     <k> $PGM:Pgm </k>
     <tape> 
-      <left> .List </left>      // ヘッドの左側のテープ
+      <left> ListItem(B) .List </left>      // ヘッドの左側のテープ
       <current> B </current>     // 現在ヘッドが指している記号
-      <right> .List </right>     // ヘッドの右側のテープ
+      <right> .List ListItem(B)</right>     // ヘッドの右側のテープ
     </tape>
     <state> q0 </state>
     <result> .K </result>
@@ -42,11 +42,15 @@ module BINARY-INCREMENT-TM
   rule <k> S1:Symbol Ss:Tape => Ss </k>
        <current> _Cu => S1 </current>
        <left> Ls => Ls ListItem(S1) </left>
+       <state> q0 => q0 </state>
        //<right> Rs => Rs ListItem(S1) </right>
        requires S1 =/=K B
        //requires (S1 ==K 0) orBool (S1 ==K 1)
   
-  rule <k> .Tape => .K </k>
+  rule <k> .Tape </k> 
+  <state> q0 => q1 </state>
+  
+  //rule <k> .Tape => .K </k> [owise]
   
   // 状態遷移規則
   
@@ -79,25 +83,35 @@ module BINARY-INCREMENT-TM
 //       <state> q0 => q1 </state>
 //    requires Ls =/=K .List
 //  
-//  // q1: 加算処理
-//  // 0を見つけたら1に変更して完了
-//  rule <current> 0 => 1 </current>
-//       <left> Ls L => Ls </left>
-//       <right> Rs => L Rs </right>
-//       <state> q1 => q2 </state>
-//    requires Ls =/=K .List
+  // q1: 加算処理
+  // 0を見つけたら1に変更して完了
+  rule <current> 0 => 1 </current>
+       <left> Ls ListItem(_L) => Ls </left>
+       <right> Rs => ListItem(1) Rs </right>
+       <state> q1 => q2 </state>
+    requires Ls =/=K .List
 //  
-//  // 1を見つけたら0に変更してキャリー継続
-//  rule <current> 1 => 0 </current>
-//       <left> Ls L => Ls </left>
-//       <right> Rs => L Rs </right>
-//       <state> q1 </state>
-//    requires Ls =/=K .List
+  // 1を見つけたら0に変更してキャリー継続
+  rule <current> 1 => L2</current>
+       <left> Ls ListItem(L2) ListItem(_L1) => Ls ListItem(L2)</left>
+       <right> Rs => ListItem(0) Rs </right>
+       <state> q1 </state>
 //  
-//  // 左端に到達（ブランク）したら1を追加
-//  rule <current> B => 1 </current>
-//       <right> Rs => B Rs </right>
-//       <state> q1 => q2 </state>
+  // 左端に到達（ブランク）したら1を追加
+  rule <current> B </current>
+       <right> Rs => ListItem(1) Rs </right>
+       <state> q1 => q2 </state>
+
+  rule <current> Cu => L2 </current>
+       <left> Ls ListItem(L2) ListItem(L1) => Ls  ListItem(L2)</left>
+       <right> Rs => ListItem(L1) Rs </right>
+       <state> q2 </state>
+       requires Cu ==K 0 orBool Cu ==K 1
+
+  rule <current> B </current>
+       <state> q2 => qf </state>
+       
+       
 //  
 //  rule <current> 0 => B </current>
 //       <left> .List </left>
