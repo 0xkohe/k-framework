@@ -6,7 +6,7 @@ module BINARY-INCREMENT-TM
 
   
   // シンタックス定義
-  syntax Symbol ::= "0" | "1" | "B"  // B はブランク記号
+  syntax Symbol ::= "0" | "1" | "$B"  // B はブランク記号
   syntax State ::= "q0" | "q1" | "q2" | "qf"  // 状態
   syntax Direction ::= "L" | "R" | "S"  // Left, Right, Stay
   
@@ -22,9 +22,9 @@ module BINARY-INCREMENT-TM
   configuration <T>
     <k> $PGM:Pgm </k>
     <tape> 
-      <left> ListItem(B) .List </left>      // ヘッドの左側のテープ
-      <current> B </current>     // 現在ヘッドが指している記号
-      <right> .List ListItem(B)</right>     // ヘッドの右側のテープ
+      <left> ListItem($B) .List </left>      // ヘッドの左側のテープ
+      <current> $B </current>     // 現在ヘッドが指している記号
+      <right> .List ListItem($B)</right>     // ヘッドの右側のテープ
     </tape>
     <state> q0 </state>
     <result> .K </result>
@@ -44,7 +44,7 @@ module BINARY-INCREMENT-TM
        <current> _Cu => S1 </current>
        <left> Ls => Ls ListItem(S1) </left>
        <state> q0 => q0 </state>
-       requires S1 =/=K B
+       requires S1 =/=K $B
   
   rule <k> .Tape </k> 
   <state> q0 => q1 </state>
@@ -66,7 +66,7 @@ module BINARY-INCREMENT-TM
        <state> q1 </state>
 //  
   // 左端に到達（ブランク）したら1を追加
-  rule <current> B </current>
+  rule <current> $B </current>
        <right> Rs => ListItem(1) Rs </right>
        <state> q1 => q2 </state>
 
@@ -76,10 +76,10 @@ module BINARY-INCREMENT-TM
        <state> q2 </state>
        requires Cu ==K 0 orBool Cu ==K 1
 
-  rule <current> B </current>
+  rule <current> $B </current>
        <state> q2 => qf </state>
 
-   rule <current> B </current>
+   rule <current> $B </current>
         <state>  qf </state>
         <left> Ls </left>
         <right> Rs </right>
