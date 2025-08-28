@@ -6,9 +6,12 @@ module GO-SYNTAX
   
   
   syntax Program ::= "package" "main" "func" "main" "(" ")" Block
-  syntax Block ::= "{" StmtList "}"
-  syntax StmtList ::= List{Stmt, ""}
+  // syntax Block ::= "{" StmtList "}"
+  syntax Block ::= "{" Stmt "}"
+  // syntax StmtList ::= List{Stmt, ""}
   syntax Stmt ::= Print | Block
+  syntax Stmt ::= Stmt Stmt                          [right]
+
   
   
   syntax Print ::= "print" "(" Exp ")"  [strict]
@@ -40,24 +43,24 @@ imports BOOL
  
  
  // ブロックは中のステートメント列をそのまま実行
- rule <k> { SL:StmtList } => SL ... </k>
- rule <k> S1:Stmt S2:StmtList => S1 ~> S2 ... </k>
+ rule <k> { SL:Stmt } => SL ... </k>
+ rule S1:Stmt S2:Stmt => S1 ~> S2
  // rule <k> S:Stmt => .K ... </k>
- rule <k> .StmtList => .K ... </k>
+ // rule <k> .StmtList => .K ... </k>
 
  
- // print: 評価済みの Int を <out> に追加
+//   // print: 評価済みの Int を <out> に追加
  rule <k> print(I :Int) => .K ... </k>
  <out> OL => OL ListItem(I) </out>
-
- rule <k> print(I :Exp => I) ... </k>
- 
- 
- // () の除去
- rule (E:Exp) => E
- 
- 
- // 算術
+//  
+//   // rule <k> print(I :Exp => I) ... </k>
+//   
+//   
+//   // () の除去
+//   rule (E:Exp) => E
+//   
+//   
+//   // 算術
  rule <k> I1:Int + I2:Int => I1 +Int I2 ... </k>
  rule <k> I1:Int * I2:Int => I1 *Int I2 ... </k>
 
