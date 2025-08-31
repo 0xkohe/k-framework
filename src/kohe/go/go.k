@@ -18,9 +18,9 @@ To reflect idiomatic use, code examples in this document elide semicolons using 
   */
   
   syntax Program ::= "package" "main" "func" "main" "(" ")" Block
-  syntax Block ::= "{" StmtList ";" "}"
-  syntax StmtList ::= List{Stmt, ";"}
-  syntax Stmt ::= Print | Block
+  syntax Block ::= "{" StatementList ";" "}"
+  syntax StatementList ::= List{Statement, ";"}
+  syntax Statement ::= Print | Block
 
   syntax Print ::= "print" "(" Exp ")" [strict]
   
@@ -49,10 +49,10 @@ imports BOOL
  // エントリ（ヘッダを剥がして main の Block を実行）
  rule <k> package main func main ( ) B:Block => B ... </k>
  
- syntax K ::= toSeq(StmtList) [function]
- rule toSeq(.StmtList) => .K
- rule toSeq(S:Stmt ; SL:StmtList) => S ~> toSeq(SL)
- rule <k> { SL:StmtList ; } => toSeq(SL) ... </k>
+ syntax K ::= toSeq(StatementList) [function]
+ rule toSeq(.StatementList) => .K
+ rule toSeq(S:Statement ; SL:StatementList) => S ~> toSeq(SL)
+ rule <k> { SL:StatementList ; } => toSeq(SL) ... </k>
  
 //   // print: 評価済みの Int を <out> に追加
  rule <k> print(I :Int) => .K ... </k>
