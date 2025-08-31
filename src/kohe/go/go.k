@@ -5,14 +5,29 @@ module GO-SYNTAX
   imports INT-SYNTAX
   
   
-  syntax Program ::= "package" "main" "func" "main" "(" ")" Block
-  // syntax Block ::= "{" StmtList "}"
-  syntax Block ::= "{" Stmt "}"
-  // syntax StmtList ::= List{Stmt, ""}
-  syntax Stmt ::= Print | Block
-  syntax Stmt ::= Stmt Stmt                          [right]
+/*
+Semicolons¶
+The formal syntax uses semicolons ";" as terminators in a number of productions. Go programs may o
+mit most of these semicolons using the following two rules:
 
-  syntax Print ::= "print" "(" Exp ")" ";"  [strict]
+When the input is broken into tokens, a semicolon is automatically inserted into the token stream
+immediately after a line's final token if that token is
+an identifier
+an integer, floating-point, imaginary, rune, or string literal
+one of the keywords break, continue, fallthrough, or return
+one of the operators and punctuation ++, --, ), ], or }
+To allow complex statements to occupy a single line, a semicolon may be omitted before a closing "
+)" or "}".
+To reflect idiomatic use, code examples in this document elide semicolons using these rules.
+  */
+  
+  syntax Program ::= "package" "main" "func" "main" "(" ")" Block
+  syntax Block ::= "{" Stmt "}"
+  syntax Stmt ::= Print | Block
+  syntax Stmt ::= Stmt ";" Stmt [right]
+  syntax Stmt ::= ";"
+
+  syntax Print ::= "print" "(" Exp ")"  [strict]
   
   
   syntax Exp ::= Int
@@ -42,10 +57,11 @@ imports BOOL
  
  // ブロックは中のステートメント列をそのまま実行
  rule <k> { SL:Stmt } => SL ... </k>
- rule S1:Stmt S2:Stmt => S1 ~> S2
+ rule S1:Stmt ; S2:Stmt => S1 ~> S2
+ rule ; => .K 
  
 //   // print: 評価済みの Int を <out> に追加
- rule <k> print(I :Int); => .K ... </k>
+ rule <k> print(I :Int) => .K ... </k>
  <out> OL => OL ListItem(I) </out>
 //   
 //   // 算術
