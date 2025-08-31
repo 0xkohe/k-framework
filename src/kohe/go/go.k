@@ -17,8 +17,8 @@ To allow complex statements to occupy a single line, a semicolon may be omitted 
 To reflect idiomatic use, code examples in this document elide semicolons using these rules.
   */
   
-  syntax Program ::= "package" "main" "func" "main" "(" ")" Block ";"
-  syntax Block ::= "{" StmtList "}" ";"
+  syntax Program ::= "package" "main" "func" "main" "(" ")" Block
+  syntax Block ::= "{" StmtList "}"
   // syntax Block ::= "{" Stmt "}"
   syntax StmtList ::= List{Stmt, ";"}
   syntax Stmt ::= Print | Block
@@ -49,11 +49,11 @@ imports BOOL
  
  
  // エントリ（ヘッダを剥がして main の Block を実行）
- rule <k> package main func main ( ) B:Block ; => B ... </k>
+ rule <k> package main func main ( ) B:Block => B ... </k>
  
  
  // ブロックは中のステートメント列をそのまま実行
- rule <k> { SL:StmtList } => SL ... </k>
+ // rule <k> { SL:StmtList } => SL ... </k>
  // rule S1:Stmt S2:Stmt => S1 ~> S2
  
  syntax K ::= toSeq(StmtList) [function]
