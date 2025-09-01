@@ -27,9 +27,15 @@ To reflect idiomatic use, code examples in this document elide semicolons using 
   
   syntax Exp ::= Int
   | "(" Exp ")" [bracket]
-  > Exp "*" Exp [left, seqstrict]
-  > Exp "+" Exp [left, seqstrict]
-  endmodule
+  > left:
+    Exp "*" Exp [left, seqstrict]
+  | Exp "/" Exp [left, seqstrict]
+  | Exp "%" Exp [left, seqstrict]
+  > left:
+    Exp "+" Exp [left, seqstrict]
+  | Exp "-" Exp [left, seqstrict]
+
+endmodule
 
 
 module GO
@@ -57,10 +63,12 @@ imports BOOL
 //   // print: 評価済みの Int を <out> に追加
  rule <k> print(I :Int) => .K ... </k>
  <out> OL => OL ListItem(I) </out>
-//   
 //   // 算術
  rule <k> I1:Int + I2:Int => I1 +Int I2 ... </k>
+ rule <k> I1:Int - I2:Int => I1 -Int I2 ... </k>
  rule <k> I1:Int * I2:Int => I1 *Int I2 ... </k>
+ rule <k> I1:Int / I2:Int => I1 /Int I2 ... </k>
+ rule <k> I1:Int % I2:Int => I1 %Int I2 ... </k>
 
  syntax Bool ::= isKResult(K) [symbol(isKResult), function]
  rule isKResult(_:Int) => true
