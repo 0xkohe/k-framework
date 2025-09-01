@@ -4,6 +4,7 @@ requires "domains.md"
 module GO-SYNTAX
   imports INT-SYNTAX
   imports BOOL-SYNTAX
+  imports ID-SYNTAX  
 
   /*
 Semicolons¶
@@ -22,11 +23,13 @@ To reflect idiomatic use, code examples in this document elide semicolons using 
   syntax Block ::= "{" StatementList ";" "}"
   syntax StatementList ::= List{Statement, ";"}
   syntax Statement ::= Print | Block | IfStmt
+                       | "var" Id "=" Exp [strict(2)]
+                       | Id "=" Exp       [strict(2)]
 
   syntax Print ::= "print" "(" Exp ")" [strict]
   
   
-  syntax Exp ::= Int
+  syntax Exp ::= Int | Id
   | "(" Exp ")" [bracket]
   > left:
     Exp "*" Exp [left, seqstrict]
@@ -61,12 +64,15 @@ imports GO-SYNTAX
 imports INT
 imports LIST
 imports BOOL
+imports MAP
+imports ID
 
 
  configuration
  <T>
  <k> $PGM:Program </k>
  <out> .List </out>
+   <env> .Map </env>  
  </T>
  
  
@@ -109,6 +115,21 @@ rule <k> if ( false ) _B:Block => .K ... </k>
 
 rule <k> if ( true ) B1:Block else _:Block => B1 ... </k>
 rule <k> if ( false ) _:Block else B2:Block => B2 ... </k>
+
+
+  // 参照: Id ⇒ 値
+  rule <k> X:Id => I ... </k>
+       <env> ... X |-> I:Int ... </env>
+
+  // 宣言: var X = <Int値>
+  rule <k> var X:Id = I:Int => .K ... </k>
+       <env> Rho => Rho [ X <- I ] </env>
+
+  // 代入: X = <Int値>
+  rule <k> X:Id = I:Int => .K ... </k>
+       <env> Rho => Rho [ X <- I ] </env>
+
+
 
  syntax Bool ::= isKResult(K) [symbol(isKResult), function]
  rule isKResult(_:Int) => true
