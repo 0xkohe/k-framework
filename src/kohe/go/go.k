@@ -18,122 +18,136 @@ one of the operators and punctuation ++, --, ), ], or }
 To allow complex statements to occupy a single line, a semicolon may be omitted before a closing ")" or "}".
 To reflect idiomatic use, code examples in this document elide semicolons using these rules.
   */
-  
+
+  // Program / blocks (same as before)
   syntax Program ::= "package" "main" "func" "main" "(" ")" Block
-  syntax Block ::= "{" StatementList ";" "}"
+  syntax Block   ::= "{" StatementList ";" "}"
   syntax StatementList ::= List{Statement, ";"}
+
+  // Types (Goのうち int / bool のみ)
+  syntax Type ::= "int" | "bool"
+
+  // Statements
   syntax Statement ::= Print | Block | IfStmt
-                       | "var" Id "=" Exp [strict(2)]
-                       | Id "=" Exp       [strict(2)]
+                     | "var" Id Type "=" Exp           [strict(3)] // typed declaration
+                     | Id "=" Exp                      [strict(2)]  // assignment
 
+  // print: まずは Int のみ（必要なら Bool も追加予定）
   syntax Print ::= "print" "(" Exp ")" [strict]
-  
-  
-  syntax Exp ::= Int | Id
-  | "(" Exp ")" [bracket]
-  > left:
-    Exp "*" Exp [left, seqstrict]
-  | Exp "/" Exp [left, seqstrict]
-  | Exp "%" Exp [left, seqstrict]
-  > left:
-    Exp "+" Exp [left, seqstrict]
-  | Exp "-" Exp [left, seqstrict]
-  
 
+  // --- Unified Exp (int と bool の両方を含む表現) ---
+  syntax Exp ::= Int | Bool | Id 
+               | "(" Exp ")" [bracket]
+               // unary
+               > "!" Exp [seqstrict]   // expects Bool; yields Bool
+               // multiplicative
+               > left:
+                 Exp "*" Exp [left, seqstrict]
+               | Exp "/" Exp [left, seqstrict]
+               | Exp "%" Exp [left, seqstrict]
+               // additive
+               > left:
+                 Exp "+" Exp [left, seqstrict]
+               | Exp "-" Exp [left, seqstrict]
+               // comparisons (non-assoc)
+               > non-assoc:
+                 Exp "<"  Exp [seqstrict]
+               | Exp ">"  Exp [seqstrict]
+               | Exp "==" Exp [seqstrict]
+               // logical
+               > left:
+                 Exp "&&" Exp [left, seqstrict]
+               | Exp "||" Exp [left, seqstrict]
 
-  syntax BExp ::= Bool
-| "(" BExp ")" [bracket]
-| Exp "<" Exp [seqstrict]
-| Exp ">" Exp [seqstrict]
-| Exp "==" Exp [seqstrict]
-| "!" BExp [seqstrict]
-> BExp "&&" BExp [left, seqstrict]
-> BExp "||" BExp [left, seqstrict]
-
-
-// If statements (with and without else)
-syntax IfStmt ::= "if" "(" BExp ")" Block  [strict(1)] //[macro]
-// syntax Stmt ::= "if" "(" Exp ")" Block [macro] => rule if (E) B => if (E) B else {}
-                | "if" "(" BExp ")" Block "else" Block [strict(1)]
-
+  // If (条件は Exp だが意味規則で Bool に評価される想定)
+  syntax IfStmt ::= "if" "(" Exp ")" Block              [strict(1)]
+                  | "if" "(" Exp ")" Block "else" Block [strict(1)]
 endmodule
 
 
 module GO
-imports GO-SYNTAX
-imports INT
-imports LIST
-imports BOOL
-imports MAP
-imports ID
+  imports GO-SYNTAX
+  imports INT
+  imports LIST
+  imports BOOL
+  imports MAP
+  imports ID
 
+  configuration
+    <T>
+      <k> $PGM:Program </k>
+      <out> .List </out>
+      <tenv> .Map </tenv>  // Id ↦ Type  (int|bool)
+      <envI> .Map </envI>  // Id ↦ Int
+      <envB> .Map </envB>  // Id ↦ Bool
+    </T>
 
- configuration
- <T>
- <k> $PGM:Program </k>
- <out> .List </out>
-   <env> .Map </env>  
- </T>
- 
- 
- // エントリ（ヘッダを剥がして main の Block を実行）
- rule <k> package main func main ( ) B:Block => B ... </k>
+  // Entry
+  rule <k> package main func main ( ) B:Block => B ... </k>
 
- syntax K ::= toSeq(StatementList) [function]
- rule toSeq(.StatementList) => .K
- rule toSeq(S:Statement ; SL:StatementList) => S ~> toSeq(SL)
- rule <k> { SL:StatementList ; } => toSeq(SL) ... </k>
- 
-// print: 評価済みの Int を <out> に追加
- rule <k> print(I :Int) => .K ... </k>
- <out> OL => OL ListItem(I) </out>
-// 算術
- rule <k> I1:Int + I2:Int => I1 +Int I2 ... </k>
- rule <k> I1:Int - I2:Int => I1 -Int I2 ... </k>
- rule <k> I1:Int * I2:Int => I1 *Int I2 ... </k>
- rule <k> I1:Int / I2:Int => I1 /Int I2 ... </k>
- rule <k> I1:Int % I2:Int => I1 %Int I2 ... </k>
- 
+  // Block sequencing
+  syntax K ::= toSeq(StatementList) [function]
+  rule toSeq(.StatementList) => .K
+  rule toSeq(S:Statement ; SL:StatementList) => S ~> toSeq(SL)
+  rule <k> { SL:StatementList ; } => toSeq(SL) ... </k>
 
- // boolean operators / comparisons
-rule <k> I1:Int < I2:Int => I1 <Int I2 ... </k>
-rule <k> I1:Int > I2:Int => I1 >Int I2 ... </k>
-rule <k> I1:Int == I2:Int => I1 ==Int I2 ... </k>
+  // print —— Int only for now
+  rule <k> print(I:Int) => .K ... </k>
+       <out> OL => OL ListItem(I) </out>
 
-rule <k> B1:Bool && B2:Bool => B1 andBool B2 ... </k>
-rule <k> B1:Bool || B2:Bool => B1 orBool B2 ... </k>
-rule <k> ! B:Bool => notBool B ... </k>
+  // --- typed var decl / assign ---
+  // var X int = <Exp:Int>
+  rule <k> var X:Id int = I:Int => .K ... </k>
+       <tenv> R => R [ X <- int ] </tenv>
+       <envI> Rho => Rho [ X <- I ] </envI>
 
+  // var X bool = <Exp:Bool>
+  rule <k> var X:Id bool = B:Bool => .K ... </k>
+       <tenv> R => R [ X <- bool ] </tenv>
+       <envB> Rho => Rho [ X <- B ] </envB>
 
-// for macro
-// rule if (E) S => if (E) S else {}
-
-// if semantics
-rule <k> if ( true ) B:Block => B ... </k>
-rule <k> if ( false ) _B:Block => .K ... </k>
-
-
-rule <k> if ( true ) B1:Block else _:Block => B1 ... </k>
-rule <k> if ( false ) _:Block else B2:Block => B2 ... </k>
-
-
-  // 参照: Id ⇒ 値
-  rule <k> X:Id => I ... </k>
-       <env> ... X |-> I:Int ... </env>
-
-  // 宣言: var X = <Int値>
-  rule <k> var X:Id = I:Int => .K ... </k>
-       <env> Rho => Rho [ X <- I ] </env>
-
-  // 代入: X = <Int値>
+  // assignment guarded by type env
   rule <k> X:Id = I:Int => .K ... </k>
-       <env> Rho => Rho [ X <- I ] </env>
+       <tenv> ... X |-> int ... </tenv>
+       <envI> Rho => Rho [ X <- I ] </envI>
 
+  rule <k> X:Id = B:Bool => .K ... </k>
+       <tenv> ... X |-> bool ... </tenv>
+       <envB> Rho => Rho [ X <- B ] </envB>
 
+  // --- lookup (context-sensitive) ---
+  rule <k> X:Id => I ... </k>
+       <envI> ... X |-> I:Int ... </envI>
+  rule <k> X:Id => B ... </k>
+       <envB> ... X |-> B:Bool ... </envB>
 
- syntax Bool ::= isKResult(K) [symbol(isKResult), function]
- rule isKResult(_:Int) => true
- rule isKResult(_:Bool) => true
- rule isKResult(_) => false [owise]
+  // --- arithmetic over Int (Int -> Int) ---
+  rule <k> I1:Int + I2:Int => I1 +Int I2 ... </k>
+  rule <k> I1:Int - I2:Int => I1 -Int I2 ... </k>
+  rule <k> I1:Int * I2:Int => I1 *Int I2 ... </k>
+  rule <k> I1:Int / I2:Int => I1 /Int I2 ... </k>
+  rule <k> I1:Int % I2:Int => I1 %Int I2 ... </k>
 
+  // --- comparisons (Int × Int -> Bool) ---
+  rule <k> I1:Int <  I2:Int => I1 <Int  I2 ... </k>
+  rule <k> I1:Int >  I2:Int => I1 >Int  I2 ... </k>
+  rule <k> I1:Int == I2:Int => I1 ==Int I2 ... </k>
+
+  // --- logical (Bool × Bool -> Bool), unary !
+  rule <k> B1:Bool && B2:Bool => B1 andBool B2 ... </k>
+  rule <k> B1:Bool || B2:Bool => B1 orBool  B2 ... </k>
+  rule <k> ! B:Bool           => notBool B    ... </k>
+
+  // --- if semantics (条件は Bool に評価された後に適用) ---
+  rule <k> if ( true  ) B:Block => B  ... </k>
+  rule <k> if ( false ) _B:Block => .K ... </k>
+
+  rule <k> if ( true  ) B1:Block else _B2:Block => B1 ... </k>
+  rule <k> if ( false ) _B1:Block else B2:Block => B2 ... </k>
+
+  // K result predicate (unchanged)
+  syntax Bool ::= isKResult(K) [symbol(isKResult), function]
+  rule isKResult(_:Int)  => true
+  rule isKResult(_:Bool) => true
+  rule isKResult(_)      => false [owise]
 endmodule

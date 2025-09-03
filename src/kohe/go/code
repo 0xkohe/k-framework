@@ -1,6 +1,6 @@
 package main
 func main() {
- var x = 3;
+ var x int = 3;
  x = x + 5;
  print(x);
  print(1 + 2 * 3);
@@ -9,4 +9,6 @@ func main() {
  print((1 - 2) * 3);
  if (1 < 2 && 3 == 3) { print(7); } else { print(9); };
  if (! (2 < 1)) { print(4); };
+
+ var y int = 2 + 5 * 3;
 }
