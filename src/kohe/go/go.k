@@ -14,7 +14,8 @@ To reflect idiomatic use, code examples in this document elide semicolons using 
 requires "domains.md"
 
 module GO-SYNTAX
-  // imports INT-SYNTAX
+  // imports INT-SYNTAX 
+  // for 3+3 instead 3 + 3
   imports UNSIGNED-INT-SYNTAX
   imports BOOL-SYNTAX
   imports ID-SYNTAX
