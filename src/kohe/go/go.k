@@ -34,7 +34,7 @@ module GO-SYNTAX
   syntax ShortVarDecl ::= Id ":=" Exp [strict(2)]
 
   // Statements (now include SimpleStmt)
-  syntax Statement ::= SimpleStmt | Print | Block | IfStmt
+  syntax Statement ::= SimpleStmt | Print | Block | IfStmt | ForStmt
                      | "var" Id Type "=" Exp  [strict(3)]   // Declaration stays as Statement (not SimpleStmt)
 
   // print (Int only for now)
@@ -66,6 +66,24 @@ module GO-SYNTAX
                   | "if" SimpleStmt ";" Exp Block                      // desugared by rule
                   | "if" SimpleStmt ";" Exp Block "else" Block        // desugared by rule
                   | "if" SimpleStmt ";" Exp Block "else" IfStmt       // desugared by rule
+  
+
+  // --- For with ForClause only ---
+  syntax ForStmt ::= "for" ForClause Block
+/*
+  ForStmt   = "for" [ Condition | ForClause | RangeClause ] Block .
+Condition = Expression .
+*/
+  
+  // Enumerate optional pieces (Init; Cond; Post)
+  syntax ForClause ::= SimpleStmt ";" Exp ";" SimpleStmt
+  | SimpleStmt ";" ";" SimpleStmt
+  | SimpleStmt ";" Exp ";"
+  | ";" Exp ";" SimpleStmt
+  | ";" ";" SimpleStmt
+  | ";" Exp ";"
+  | SimpleStmt ";" ";"
+  | ";" ";"
 
 endmodule
 
@@ -163,6 +181,30 @@ module GO
   rule <k> if false _B:Block => .K ... </k>
   rule <k> if true  B1:Block else _B2:Block => B1 ... </k>
   rule <k> if false _B1:Block else B2:Block => B2 ... </k>
+  
+// --- ForClause desugaring to an internal loop ---
+syntax KItem ::= loop(Exp, K, Block)
+syntax KItem ::= loopV(Exp, Exp, K, Block) [strict(1)]
+//       (評価対象)   (元の式を保持)  (post) (本体)
+
+// For の各形を loop に落とす（ここはそのままでOK）
+rule <k> for S1:SimpleStmt ; E:Exp ; S2:SimpleStmt B:Block => S1 ~> loop(E, S2, B) ... </k>
+rule <k> for S1:SimpleStmt ; ; S2:SimpleStmt B:Block       => S1 ~> loop(true, S2, B) ... </k>
+rule <k> for S1:SimpleStmt ; E:Exp ; B:Block               => S1 ~> loop(E, .K, B)   ... </k>
+rule <k> for ; E:Exp ; S2:SimpleStmt B:Block               =>      loop(E, S2, B)   ... </k>
+rule <k> for ; ; S2:SimpleStmt B:Block                     =>      loop(true, S2, B) ... </k>
+rule <k> for ; E:Exp ; B:Block                             =>      loop(E, .K, B)    ... </k>
+rule <k> for S1:SimpleStmt ; ; B:Block                     => S1 ~> loop(true, .K, B) ... </k>
+rule <k> for ; ; B:Block                                   =>      loop(true, .K, B)  ... </k>
+
+// loop の評価（毎回 E を評価して分岐する）
+rule <k> loop(E:Exp, SP:K, B:Block) => loopV(E, E, SP, B) ... </k>
+
+// 条件が true のとき：本体→post→再帰
+rule <k> loopV(true, E, SP:K, B:Block) => B ~> SP ~> loop(E, SP, B) ... </k>
+
+// 条件が false のとき：終了
+rule <k> loopV(false, _E, _SP, _B) => .K ... </k>
 
 
   // K result predicate
