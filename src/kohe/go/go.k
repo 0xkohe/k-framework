@@ -29,9 +29,11 @@ module GO-SYNTAX
   syntax Type ::= "int" | "bool"
 
   // --- SimpleStmt (subset) ---
-  syntax SimpleStmt ::= Assignment | ShortVarDecl
+  syntax SimpleStmt ::= Assignment | ShortVarDecl | IncDecStmt
   syntax Assignment ::= Id "=" Exp [strict(2)]
   syntax ShortVarDecl ::= Id ":=" Exp [strict(2)]
+  syntax IncDecStmt ::= Id "++" | Id "--"
+
 
   // Statements (now include SimpleStmt)
   syntax Statement ::= SimpleStmt | Print | Block | IfStmt | ForStmt
@@ -165,6 +167,15 @@ module GO
   rule <k> I1:Int >  I2:Int => I1 >Int  I2 ... </k>
   rule <k> I1:Int == I2:Int => I1 ==Int I2 ... </k>
   rule <k> - I:Int => 0 -Int I ... </k>
+  
+  
+
+  rule <k> X:Id ++ => X = (X + 1) ... </k>
+     <tenv> ... X |-> int ... </tenv>
+
+  rule <k> X:Id -- => X = (X - 1) ... </k>
+     <tenv> ... X |-> int ... </tenv>
+
 
 
   rule <k> B1:Bool && B2:Bool => B1 andBool B2 ... </k>
