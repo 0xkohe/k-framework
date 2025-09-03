@@ -1,7 +1,7 @@
 package main
 func main() {
  var x int = 3;
- x = x + 5;
+ x = x + -5;
  print(x);
  print(1 + 2 * 3);
  print(1 + 2 * 3 / 3);
@@ -11,4 +11,9 @@ func main() {
  if (! (2 < 1)) { print(4); };
 
  var y int = 2 + 5 * 3;
+ 
+ var a int = 0;
+ if a = 10; a == 10 { print(a); };
+ d := 4+4;
+ if e := 3; e > 5 { print(e); } else { print(0); };
 }
