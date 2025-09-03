@@ -16,7 +16,7 @@ func main() {
  if a = 10; a == 10 { print(a); };
  d := 4+4;
  if e := 3; e > 5 { print(e); } else { print(0); };
- for f:=0; f < 2; f = f + 1 {
- print(1000);
+ for f:=0; f<2; f = f+1 {
+   print(1000);
  };
 }

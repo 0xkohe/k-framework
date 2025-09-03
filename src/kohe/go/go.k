@@ -191,11 +191,11 @@ module GO
   rule <k> for S1:SimpleStmt ; E:Exp ; S2:SimpleStmt B:Block => S1 ~> loop(E, S2, B) ... </k>
   rule <k> for S1:SimpleStmt ; ; S2:SimpleStmt B:Block       => S1 ~> loop(true, S2, B) ... </k>
   rule <k> for S1:SimpleStmt ; E:Exp ; B:Block               => S1 ~> loop(E, .K, B)   ... </k>
-  rule <k> for ; E:Exp ; S2:SimpleStmt B:Block               =>      loop(E, S2, B)   ... </k>
-  rule <k> for ; ; S2:SimpleStmt B:Block                     =>      loop(true, S2, B) ... </k>
-  rule <k> for ; E:Exp ; B:Block                             =>      loop(E, .K, B)    ... </k>
+  rule <k> for ; E:Exp ; S2:SimpleStmt B:Block               =>       loop(E, S2, B)   ... </k>
+  rule <k> for ; ; S2:SimpleStmt B:Block                     =>       loop(true, S2, B) ... </k>
+  rule <k> for ; E:Exp ; B:Block                             =>       loop(E, .K, B)    ... </k>
   rule <k> for S1:SimpleStmt ; ; B:Block                     => S1 ~> loop(true, .K, B) ... </k>
-  rule <k> for ; ; B:Block                                   =>      loop(true, .K, B)  ... </k>
+  rule <k> for ; ; B:Block                                   =>       loop(true, .K, B)  ... </k>
   
   // loop の評価（毎回 E を評価して分岐する）
   rule <k> loop(E:Exp, SP:K, B:Block) => loopV(E, E, SP, B) ... </k>
