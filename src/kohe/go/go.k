@@ -1,4 +1,4 @@
-  /*
+/*
 Semicolons¶
 The formal syntax uses semicolons ";" as terminators in a number of productions. Go programs may omit most of these semicolons using the following two rules:
 
@@ -9,13 +9,12 @@ one of the keywords break, continue, fallthrough, or return
 one of the operators and punctuation ++, --, ), ], or }
 To allow complex statements to occupy a single line, a semicolon may be omitted before a closing ")" or "}".
 To reflect idiomatic use, code examples in this document elide semicolons using these rules.
-  */
-  
+*/
+
 requires "domains.md"
 
 module GO-SYNTAX
-  // imports INT-SYNTAX 
-  // for 3+3 instead 3 + 3
+  // for writing 3+3 without spaces
   imports UNSIGNED-INT-SYNTAX
   imports BOOL-SYNTAX
   imports ID-SYNTAX
@@ -34,10 +33,9 @@ module GO-SYNTAX
   syntax ShortVarDecl ::= Id ":=" Exp [strict(2)]
   syntax IncDecStmt ::= Id "++" | Id "--"
 
-
-  // Statements (now include SimpleStmt)
-  syntax Statement ::= SimpleStmt | Print | Block | IfStmt | ForStmt  | BreakStmt | ContinueStmt
-                     | "var" Id Type "=" Exp  [strict(3)]   // Declaration stays as Statement (not SimpleStmt)
+  // Statements
+  syntax Statement ::= SimpleStmt | Print | Block | IfStmt | ForStmt | BreakStmt | ContinueStmt
+                     | "var" Id Type "=" Exp  [strict(3)]   // Declaration (typed)
 
   // print (Int only for now)
   syntax Print ::= "print" "(" Exp ")" [strict]
@@ -65,31 +63,32 @@ module GO-SYNTAX
   syntax IfStmt ::= "if" Exp Block                                   [strict(1)]
                   | "if" Exp Block "else" Block                       [strict(1)]
                   | "if" Exp Block "else" IfStmt                      [strict(1)]
-                  | "if" SimpleStmt ";" Exp Block                      // desugared by rule
+                  | "if" SimpleStmt ";" Exp Block                     // desugared by rule
                   | "if" SimpleStmt ";" Exp Block "else" Block        // desugared by rule
                   | "if" SimpleStmt ";" Exp Block "else" IfStmt       // desugared by rule
-  
 
   // --- For with ForClause only ---
   syntax ForStmt ::= "for" ForClause Block
-  
+
+  // break / continue (Go statements)
   syntax BreakStmt ::= "break"
   syntax ContinueStmt ::= "continue"
-/*
-  ForStmt   = "for" [ Condition | ForClause | RangeClause ] Block .
-Condition = Expression .
-*/
-  
-  // Enumerate optional pieces (Init; Cond; Post)
-  syntax ForClause ::= SimpleStmt ";" Exp ";" SimpleStmt
-  | SimpleStmt ";" ";" SimpleStmt
-  | SimpleStmt ";" Exp ";"
-  | ";" Exp ";" SimpleStmt
-  | ";" ";" SimpleStmt
-  | ";" Exp ";"
-  | SimpleStmt ";" ";"
-  | ";" ";"
 
+  /*
+    ForStmt   = "for" [ Condition | ForClause | RangeClause ] Block .
+    Condition = Expression .
+    (we implement only ForClause here)
+  */
+
+  // Enumerate optional pieces (Init; Cond; Post) — no trailing ";" here
+  syntax ForClause ::= SimpleStmt ";" Exp ";" SimpleStmt
+                     | SimpleStmt ";" ";" SimpleStmt
+                     | SimpleStmt ";" Exp ";"
+                     | ";" Exp ";" SimpleStmt
+                     | ";" ";" SimpleStmt
+                     | ";" Exp ";"
+                     | SimpleStmt ";" ";"
+                     | ";" ";"
 endmodule
 
 
@@ -105,19 +104,49 @@ module GO
     <T>
       <k> $PGM:Program </k>
       <out> .List </out>
+
+      // typed environments
       <tenv> .Map </tenv>  // Id ↦ Type  (int|bool)
       <envI> .Map </envI>  // Id ↦ Int
       <envB> .Map </envB>  // Id ↦ Bool
+
+      // scope stacks
+      <tenvStack> .List </tenvStack>
+      <envIStack> .List </envIStack>
+      <envBStack> .List </envBStack>
     </T>
 
   // Entry
   rule <k> package main func main ( ) B:Block => B ... </k>
 
-  // Block sequencing
+  // ============
+  // Block scope
+  // ============
+  syntax KItem ::= enterScope(K) | "exitScope"
   syntax K ::= toSeq(StatementList) [function]
   rule toSeq(.StatementList) => .K
   rule toSeq(S:Statement ; SL:StatementList) => S ~> toSeq(SL)
-  rule <k> { SL:StatementList ; } => toSeq(SL) ... </k>
+
+  // Enter a new scope for each block
+  rule <k> { SL:StatementList ; } => enterScope(toSeq(SL)) ... </k>
+
+  // On entering: push envs, run body, then exitScope
+  rule <k> enterScope(Body:K) => Body ~> exitScope ... </k>
+       <tenv> T </tenv>
+       <envI> I </envI>
+       <envB> B </envB>
+       <tenvStack> TS => TS ListItem(T) </tenvStack>
+       <envIStack> IS => IS ListItem(I) </envIStack>
+       <envBStack> BS => BS ListItem(B) </envBStack>
+
+  // On exiting: restore saved envs
+  rule <k> exitScope => .K ... </k>
+       <tenvStack> (TS ListItem(T)) => TS </tenvStack>
+       <envIStack> (IS ListItem(I)) => IS </envIStack>
+       <envBStack> (BS ListItem(BV)) => BS </envBStack>
+       <tenv> _ => T </tenv>
+       <envI> _ => I </envI>
+       <envB> _ => BV </envB>
 
   // print —— Int only
   rule <k> print(I:Int) => .K ... </k>
@@ -152,7 +181,7 @@ module GO
        <tenv> ... X |-> bool ... </tenv>
        <envB> Rho => Rho [ X <- B ] </envB>
 
-  // lookups
+  // lookups (context-sensitive)
   rule <k> X:Id => I ... </k>
        <envI> ... X |-> I:Int ... </envI>
   rule <k> X:Id => B ... </k>
@@ -165,25 +194,22 @@ module GO
   rule <k> I1:Int / I2:Int => I1 /Int I2 ... </k>
   rule <k> I1:Int % I2:Int => I1 %Int I2 ... </k>
 
-  // comparisons / boolean ops
+  // comparisons / unary / boolean ops
   rule <k> I1:Int <  I2:Int => I1 <Int  I2 ... </k>
   rule <k> I1:Int >  I2:Int => I1 >Int  I2 ... </k>
   rule <k> I1:Int == I2:Int => I1 ==Int I2 ... </k>
   rule <k> - I:Int => 0 -Int I ... </k>
-  
-  
-
-  rule <k> X:Id ++ => X = (X + 1) ... </k>
-     <tenv> ... X |-> int ... </tenv>
-
-  rule <k> X:Id -- => X = (X - 1) ... </k>
-     <tenv> ... X |-> int ... </tenv>
-
-
 
   rule <k> B1:Bool && B2:Bool => B1 andBool B2 ... </k>
   rule <k> B1:Bool || B2:Bool => B1 orBool  B2 ... </k>
   rule <k> ! B:Bool           => notBool B    ... </k>
+
+  // ++ / --  (sugar to assignment; int only)
+  rule <k> X:Id ++ => X = (X + 1) ... </k>
+       <tenv> ... X |-> int ... </tenv>
+
+  rule <k> X:Id -- => X = (X - 1) ... </k>
+       <tenv> ... X |-> int ... </tenv>
 
   // --- If desugaring when init present ---
   rule <k> if S:SimpleStmt ; E:Exp B:Block => S ~> if E B ... </k>
@@ -195,42 +221,48 @@ module GO
   rule <k> if false _B:Block => .K ... </k>
   rule <k> if true  B1:Block else _B2:Block => B1 ... </k>
   rule <k> if false _B1:Block else B2:Block => B2 ... </k>
-  
-  // --- ForClause desugaring to an internal loop ---
+
+  // --- ForClause → internal loop (scoped) ---
+  // wrap every desugaring in enterScope(...) so init-binds are limited to the loop
   syntax KItem ::= loop(Exp, K, Block)
   syntax KItem ::= loopV(Exp, Exp, K, Block) [strict(1)]
   syntax KItem ::= "breakSignal" | "continueSignal"
 
-  rule <k> continue => continueSignal ... </k>
-  // loop に当たるまで、手前の KItem をどんどん捨てる
-  rule <k> continueSignal ~> _KI:KItem => continueSignal ... </k> [owise]
-  // loop に当たったら post を実行してループ継続
-  rule <k> continueSignal ~> loop(E, SP, B) => SP ~> loop(E, SP, B) ... </k>
+  // For variants (8 patterns), all scoped:
+  rule <k> for S1:SimpleStmt ; E:Exp ; S2:SimpleStmt B:Block => enterScope(S1 ~> loop(E, S2, B)) ... </k>
+  rule <k> for S1:SimpleStmt ; ; S2:SimpleStmt B:Block       => enterScope(S1 ~> loop(true, S2, B)) ... </k>
+  rule <k> for S1:SimpleStmt ; E:Exp ; B:Block               => enterScope(S1 ~> loop(E, .K, B)) ... </k>
+  rule <k> for ; E:Exp ; S2:SimpleStmt B:Block               => enterScope(loop(E, S2, B)) ... </k>
+  rule <k> for ; ; S2:SimpleStmt B:Block                     => enterScope(loop(true, S2, B)) ... </k>
+  rule <k> for ; E:Exp ; B:Block                             => enterScope(loop(E, .K, B)) ... </k>
+  rule <k> for S1:SimpleStmt ; ; B:Block                     => enterScope(S1 ~> loop(true, .K, B)) ... </k>
+  rule <k> for ; ; B:Block                                   => enterScope(loop(true, .K, B)) ... </k>
 
-  rule <k> break    => breakSignal    ... </k>
-  rule <k> breakSignal ~> _KI:KItem => breakSignal ... </k> [owise]
-  rule <k> breakSignal ~> loop(_E, _SP, _B) => .K ... </k>
-
-  
-  // For の各形を loop に落とす（ここはそのままでOK）
-  rule <k> for S1:SimpleStmt ; E:Exp ; S2:SimpleStmt B:Block => S1 ~> loop(E, S2, B) ... </k>
-  rule <k> for S1:SimpleStmt ; ; S2:SimpleStmt B:Block       => S1 ~> loop(true, S2, B) ... </k>
-  rule <k> for S1:SimpleStmt ; E:Exp ; B:Block               => S1 ~> loop(E, .K, B)   ... </k>
-  rule <k> for ; E:Exp ; S2:SimpleStmt B:Block               =>       loop(E, S2, B)   ... </k>
-  rule <k> for ; ; S2:SimpleStmt B:Block                     =>       loop(true, S2, B) ... </k>
-  rule <k> for ; E:Exp ; B:Block                             =>       loop(E, .K, B)    ... </k>
-  rule <k> for S1:SimpleStmt ; ; B:Block                     => S1 ~> loop(true, .K, B) ... </k>
-  rule <k> for ; ; B:Block                                   =>       loop(true, .K, B)  ... </k>
-  
-  // loop の評価（毎回 E を評価して分岐する）
+  // loop step: re-evaluate condition each time via loopV
   rule <k> loop(E:Exp, SP:K, B:Block) => loopV(E, E, SP, B) ... </k>
-  
-  // 条件が true のとき：本体→post→再帰
+
+  // cond true: run body, then post, then next iteration
   rule <k> loopV(true, E, SP:K, B:Block) => B ~> SP ~> loop(E, SP, B) ... </k>
-  
-  // 条件が false のとき：終了
+
+  // cond false: exit
   rule <k> loopV(false, _E, _SP, _B) => .K ... </k>
 
+  // --- break / continue semantics ---
+
+  // surface → signals
+  rule <k> break    => breakSignal    ... </k>
+  rule <k> continue => continueSignal ... </k>
+
+  // bubble signals until the nearest loop(...)
+  rule <k> continueSignal ~> _KI:KItem => continueSignal ... </k> [owise]
+  rule <k> breakSignal    ~> _KI:KItem => breakSignal    ... </k> [owise]
+
+  // at loop boundary:
+  // continue: execute the visible post (to the left), then re-enter loop
+  rule <k> continueSignal ~> loop(E, SP, B) => SP ~> loop(E, SP, B) ... </k>
+
+  // break: exit loop entirely (no post)
+  rule <k> breakSignal ~> loop(_E, _SP, _B) => .K ... </k>
 
   // K result predicate
   syntax Bool ::= isKResult(K) [symbol(isKResult), function]
