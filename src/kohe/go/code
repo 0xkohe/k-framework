@@ -19,4 +19,23 @@ func main() {
  for f:=0; f<2; f = f+1 {
    print(1000);
  };
+
+
+  var ii int = 0;
+  for i:=0 ; i < 5 ; i = i + 1 {
+    print(i);
+    if i == 1 { break; };
+  };
+
+
+  	var i1 int = 0;
+	for ; i1 < 5; i1++ {
+		if i1 == 2 {
+			continue;
+		};
+		if i1 == 4 {
+			break;
+		};
+		print(i1);
+	};
 }

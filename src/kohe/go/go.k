@@ -36,7 +36,7 @@ module GO-SYNTAX
 
 
   // Statements (now include SimpleStmt)
-  syntax Statement ::= SimpleStmt | Print | Block | IfStmt | ForStmt
+  syntax Statement ::= SimpleStmt | Print | Block | IfStmt | ForStmt  | BreakStmt | ContinueStmt
                      | "var" Id Type "=" Exp  [strict(3)]   // Declaration stays as Statement (not SimpleStmt)
 
   // print (Int only for now)
@@ -72,6 +72,9 @@ module GO-SYNTAX
 
   // --- For with ForClause only ---
   syntax ForStmt ::= "for" ForClause Block
+  
+  syntax BreakStmt ::= "break"
+  syntax ContinueStmt ::= "continue"
 /*
   ForStmt   = "for" [ Condition | ForClause | RangeClause ] Block .
 Condition = Expression .
@@ -196,7 +199,18 @@ module GO
   // --- ForClause desugaring to an internal loop ---
   syntax KItem ::= loop(Exp, K, Block)
   syntax KItem ::= loopV(Exp, Exp, K, Block) [strict(1)]
-  //       (評価対象)   (元の式を保持)  (post) (本体)
+  syntax KItem ::= "breakSignal" | "continueSignal"
+
+  rule <k> continue => continueSignal ... </k>
+  // loop に当たるまで、手前の KItem をどんどん捨てる
+  rule <k> continueSignal ~> _KI:KItem => continueSignal ... </k> [owise]
+  // loop に当たったら post を実行してループ継続
+  rule <k> continueSignal ~> loop(E, SP, B) => SP ~> loop(E, SP, B) ... </k>
+
+  rule <k> break    => breakSignal    ... </k>
+  rule <k> breakSignal ~> _KI:KItem => breakSignal ... </k> [owise]
+  rule <k> breakSignal ~> loop(_E, _SP, _B) => .K ... </k>
+
   
   // For の各形を loop に落とす（ここはそのままでOK）
   rule <k> for S1:SimpleStmt ; E:Exp ; S2:SimpleStmt B:Block => S1 ~> loop(E, S2, B) ... </k>
@@ -224,18 +238,3 @@ module GO
   rule isKResult(_:Bool) => true
   rule isKResult(_)      => false [owise]
 endmodule
-
-// ---
-// Quick tests
-// 1) init あり
-// package main func main(){
-//   if x := 3+4; x > 5 { print(x); } else { print(0); };
-// }
-// => <out>: ListItem(7)
-//
-// 2) 代入を init に
-// package main func main(){
-//   var a int = 0;
-//   if a = 10; a == 10 { print(a); };
-// }
-// => <out>: ListItem(10)
