@@ -114,6 +114,10 @@ module GO
       <tenvStack> .List </tenvStack>
       <envIStack> .List </envIStack>
       <envBStack> .List </envBStack>
+
+  // ============ Function environment ============
+  // Store bodies & signatures separately from variable envs.
+      <fenv> .Map </fenv>    // Id ↦ FunDef
     </T>
 
   // Entry
