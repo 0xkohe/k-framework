@@ -47,4 +47,9 @@ func main() {
 		};
 		 	print(x);
 	};
+
+  func fact() int {
+      return 1;
+  };
+
 }

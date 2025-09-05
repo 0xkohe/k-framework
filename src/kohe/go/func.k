@@ -23,12 +23,11 @@ module GO-SYNTAX-FUNC
   // Result        = Type .   // (only single return value for this model)
 
   // Make function type a Type variant
-  syntax Type ::= FunctionType
+  syntax Type ::= FunctionType 
   syntax FunctionType ::= "func" Signature
 
   // Parameters and Signatures
   syntax Parameters ::= "(" ParamList ")"
-                      | "(" ")"        // empty
   syntax ParamList  ::= List{Param, ","}
   syntax Param      ::= Id Type          // e.g., x int
 
@@ -65,13 +64,18 @@ module GO-SYNTAX-FUNC
   rule typesOf((_X:Id T:Type , PL:ParamList)) => T , typesOf(PL)
   rule typesOf((_X:Id T:Type))                => T
 
+  // syntax ParamIds   ::= paramIdsOf(Parameters)   [function]
+  // syntax ParamTypes ::= paramTypesOf(Parameters) [function]
+  // rule paramIdsOf(( ) )            => .ParamIds
+  // rule paramIdsOf(( PL:ParamList)) => idsOf(PL)
+
+  // rule paramTypesOf(( ) )            => .ParamTypes
+  // rule paramTypesOf((PL:ParamList)) => typesOf(PL)
   syntax ParamIds   ::= paramIdsOf(Parameters)   [function]
   syntax ParamTypes ::= paramTypesOf(Parameters) [function]
-  rule paramIdsOf(( ) )            => .ParamIds
-  rule paramIdsOf(( PL:ParamList)) => idsOf(PL)
-
-  rule paramTypesOf(( ) )            => .ParamTypes
-  rule paramTypesOf((PL:ParamList)) => typesOf(PL)
+  // Parameters は常に "(" ParamList ")" の形（空も含む）
+  rule paramIdsOf(( PL:ParamList))   => idsOf(PL)
+  rule paramTypesOf(( PL:ParamList)) => typesOf(PL)
 
   syntax RetType ::= Type | "void"
   syntax RetType ::= retTypeOf(Signature) [function]
@@ -98,6 +102,7 @@ module GO-FUNC
   // ---------- Declaration: func f Sig { ... } ----------
   // 1) Record its type in <tenv> as a FunctionType "func Sig"
   // 2) Record its body & parameter meta in <fenv>
+// rule <k> funcDecl(F:Id, S:Signature, B:Block) => .K ... </k>
   rule <k> func F:Id S:Signature B:Block => .K ... </k>
        <tenv>  R  => R  [ F <- (func S) ] </tenv>
        <fenv>  FE => FE [ F <- fun(paramIdsOf(S), paramTypesOf(S), retTypeOf(S), B) ] </fenv>
@@ -147,3 +152,18 @@ module GO-FUNC
   // (Optional) A call used as a Statement simply discards its value if any,
   // thanks to the surrounding context, so no extra rule is needed.
 endmodule
+
+/*
+
+  func fact(n int) int {
+    if n == 0 {
+      return 1;
+    } else {
+      return n * fact(n - 1);
+    };
+  };
+
+  var r int = fact(5);
+  print(r);
+
+*/
