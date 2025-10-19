@@ -35,7 +35,7 @@ module GO-SYNTAX-FUNC
                        | Parameters Type // with single return type
 
   // Calls (as expression or statement)
-  syntax Call      ::= Id "(" ArgList ")" [seqstrict]
+  syntax Call      ::= Id "(" ArgList ")" // [strict(2)]
   syntax ArgList   ::= List{Exp, ","}
 
   // return statements
@@ -43,7 +43,7 @@ module GO-SYNTAX-FUNC
                       | "return" Exp [strict]
 
   // Declarations and statements
-  syntax FuncDecl  ::= "func" Id Signature Block
+  syntax FuncDecl  ::= "func" Id Signature Block 
   syntax Statement ::= FuncDecl | ReturnStmt | Call
 
   // Calls are also expressions (so you can do x := f(1,2))
@@ -103,9 +103,20 @@ module GO-FUNC
   // 1) Record its type in <tenv> as a FunctionType "func Sig"
   // 2) Record its body & parameter meta in <fenv>
 // rule <k> funcDecl(F:Id, S:Signature, B:Block) => .K ... </k>
-  rule <k> func F:Id S:Signature B:Block => .K ... </k>
-       <tenv>  R  => R  [ F <- (func S) ] </tenv>
-       <fenv>  FE => FE [ F <- fun(paramIdsOf(S), paramTypesOf(S), retTypeOf(S), B) ] </fenv>
+  //rule <k> func F:Id S:Signature B:Block => .K ... </k>
+  //
+  // rule <k> func F:Id S:Signature B:Block => .K ... </k>
+  //      <tenv>  R  => R  [ F <- (func S) ] </tenv>
+  //      <fenv>  FE => FE [ F <- fun(paramIdsOf(S), paramTypesOf(S), retTypeOf(S), B) ] </fenv>
+       
+  rule <k> func F:Id PS:Parameters B:Block => .K ... </k>
+       <tenv> TEnv => TEnv [ F <- (func PS) ] </tenv>
+       <fenv> FEnv => FEnv [ F <- fun(paramIdsOf(PS), paramTypesOf(PS), void, B) ] </fenv>
+  
+  rule <k> func F:Id PS:Parameters RT:Type B:Block => .K ... </k>
+       <tenv> TEnv => TEnv [ F <- (func (PS RT)) ] </tenv>
+       <fenv> FEnv => FEnv [ F <- fun(paramIdsOf(PS), paramTypesOf(PS), RT, B) ] </fenv>
+
 
   // ============ Calls ============
   // Evaluate arguments left-to-right (seqstrict on Call) then bind as local vars
@@ -116,8 +127,12 @@ module GO-FUNC
   syntax KItem ::= bindParams(ParamIds, ParamTypes, ArgList)
 
   // Call desugaring: f(a,b) \n=> enterScope( bind params ; body ; return-join )
-  rule <k> F:Id (AL:ArgList) => enterScope(bindParams(PIs, PTs, AL) ~> B ~> returnJoin(RT)) ... </k>
-       <fenv> ... F |-> fun(PIs, PTs, RT, B) ... </fenv>
+  // rule <k> F:Id (AL:ArgList) => enterScope(bindParams(PIs, PTs, AL) ~> B ~> returnJoin(RT)) ... </k>
+     //<fenv> ... F |-> fun(PIs, PTs, RT, B) ... </fenv>
+       
+
+  rule <k> F:Id (AL:ArgList) => enterScope(bindParams(PIs, PTs, AL) ~> B) ~> returnJoin(RT) ... </k>
+     <fenv> ... F |-> fun(PIs, PTs, RT, B) ... </fenv>
 
   // Bind parameters by translating each (name, type, argVal) triple into a typed var-decl
   // 空引数: .ArgList
@@ -134,7 +149,9 @@ module GO-FUNC
 
   // Surface returns → signals
   rule <k> return       => returnSignal(.K) ... </k>
-  rule <k> return V:Exp => V ~> returnSignal(V) ... </k> 
+  rule <k> return V:Exp => returnSignal(V) ... </k> 
+  
+  rule <k> returnSignal(V) ~> exitScope => exitScope ~> returnSignal(V) ... </k>
 
   // Bubble returnSignal upward until the matching returnJoin boundary
   rule <k> returnSignal(V) ~> _KI:KItem => returnSignal(V) ... </k> [owise]

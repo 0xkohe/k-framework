@@ -63,9 +63,9 @@ module GO-SYNTAX
   syntax IfStmt ::= "if" Exp Block                                   [strict(1)]
                   | "if" Exp Block "else" Block                       [strict(1)]
                   | "if" Exp Block "else" IfStmt                      [strict(1)]
-                  | "if" SimpleStmt ";" Exp Block                     // desugared by rule
-                  | "if" SimpleStmt ";" Exp Block "else" Block        // desugared by rule
-                  | "if" SimpleStmt ";" Exp Block "else" IfStmt       // desugared by rule
+                  | "if" SimpleStmt ";" Exp Block                     // by rule
+                  | "if" SimpleStmt ";" Exp Block "else" Block        // by rule
+                  | "if" SimpleStmt ";" Exp Block "else" IfStmt       // by rule
 
   // --- For with ForClause only ---
   syntax ForStmt ::= "for" ForClause Block
