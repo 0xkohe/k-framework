@@ -1,4 +1,9 @@
 package main
+
+func fact() int {
+    return 1;
+}
+
 func main() {
  var x int = 3;
  x = x + -5;
@@ -48,9 +53,6 @@ func main() {
 		 	print(x);
 	};
 
-  func fact() int {
-      return 1;
-  };
 
   v := fact();
   print(v);

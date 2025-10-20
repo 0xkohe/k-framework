@@ -45,6 +45,8 @@ module GO-SYNTAX-FUNC
   // Declarations and statements
   syntax FuncDecl  ::= "func" Id Signature Block 
   syntax Statement ::= FuncDecl | ReturnStmt | Call
+  
+  syntax TopDecl ::= FuncDecl
 
   // Calls are also expressions (so you can do x := f(1,2))
   syntax Exp ::= Call

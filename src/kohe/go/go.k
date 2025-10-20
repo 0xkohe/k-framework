@@ -19,8 +19,14 @@ module GO-SYNTAX
   imports BOOL-SYNTAX
   imports ID-SYNTAX
 
+  
   // Program / blocks
-  syntax Program ::= "package" "main" "func" "main" "(" ")" Block
+  // トップレベル宣言（TopDecl）を main の前に並べられるようにする
+  syntax TopDecl        // ← ここでは“宣言の枠”だけ宣言（中身は別モジュールで追加）
+  syntax TopDecls ::= List{TopDecl, ";"}
+  syntax Program ::= "package" "main" TopDecls "func" "main" "(" ")" Block
+
+
   syntax Block   ::= "{" StatementList ";" "}"
   syntax StatementList ::= List{Statement, ";"}
 
@@ -120,8 +126,15 @@ module GO
       <fenv> .Map </fenv>    // Id ↦ FunDef
     </T>
 
+  
+  // TopDecls を列に落としてから main を実行
+  syntax K ::= toSeqTop(TopDecls) [function]
+  rule toSeqTop(.TopDecls) => .K
+  rule toSeqTop(TD:TopDecl ; TL:TopDecls) => TD ~> toSeqTop(TL)
+
   // Entry
-  rule <k> package main func main ( ) B:Block => B ... </k>
+  rule <k> package main TL:TopDecls func main ( ) B:Block
+        => toSeqTop(TL) ~> B ... </k>
 
   // ============
   // Block scope
