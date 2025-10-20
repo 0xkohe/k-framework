@@ -24,7 +24,7 @@ module GO-SYNTAX
   // トップレベル宣言（TopDecl）を main の前に並べられるようにする
   syntax TopDecl        // ← ここでは“宣言の枠”だけ宣言（中身は別モジュールで追加）
   syntax TopDecls ::= List{TopDecl, ";"}
-  syntax Program ::= "package" "main" TopDecls "func" "main" "(" ")" Block
+  syntax Program ::= "package" "main" TopDecls "func" "main" "(" ")" Block TopDecls
 
 
   syntax Block   ::= "{" StatementList ";" "}"
@@ -133,8 +133,8 @@ module GO
   rule toSeqTop(TD:TopDecl ; TL:TopDecls) => TD ~> toSeqTop(TL)
 
   // Entry
-  rule <k> package main TL:TopDecls func main ( ) B:Block
-        => toSeqTop(TL) ~> B ... </k>
+  rule <k> package main TL:TopDecls func main ( ) B:Block TL2:TopDecls
+        => toSeqTop(TL) ~> toSeqTop(TL2) ~> B ... </k>
 
   // ============
   // Block scope
